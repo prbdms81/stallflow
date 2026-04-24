@@ -1,0 +1,584 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String         @id @default(cuid())
+  name             String
+  email            String         @unique
+  emailVerified    DateTime?
+  password         String?
+  phone            String?
+  avatar           String?
+  role             String         @default("VENDOR")
+  bio              String?
+  company          String?
+  gstin            String?
+  isVerified       Boolean        @default(false)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  accounts               Account[]
+  bookings               Booking[]
+  events                 Event[]
+  messagesReceived       Message[]              @relation("MessageReceiver")
+  messages               Message[]              @relation("MessageSender")
+  notifications          Notification[]
+  reviewsReceived        Review[]               @relation("ReviewTarget")
+  reviewsGiven           Review[]               @relation("ReviewAuthor")
+  sessions               Session[]
+  vendorProfile          VendorProfile?
+  venues                 Venue[]
+  stallMenuItems         StallMenuItem[]
+  vendorSubscriptions    VendorSubscription[]
+  eventTemplates         EventTemplate[]
+  notificationPreference NotificationPreference?
+  inventoryItems         InventoryItem[]
+  waitlistEntries        WaitlistEntry[]
+  eventTeamMembers       EventTeamMember[]
+  bnplAgreements         BNPLAgreement[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model VendorProfile {
+  id            String           @id @default(cuid())
+  userId        String           @unique
+  businessName  String
+  category      String
+  description   String?
+  logo          String?
+  portfolio     String?
+  experience    Int              @default(0)
+  rating        Float            @default(0)
+  totalEvents   Int              @default(0)
+  socialLinks   String?
+  stallPhotos   String?
+  fssaiNumber   String?
+  fssaiVerified Boolean          @default(false)
+  isTrusted     Boolean          @default(false)
+  trustScore    Float            @default(0)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  udyamNumber   String?
+  documents     VendorDocument[]
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  icon        String?
+  image       String?
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  events      Event[]
+}
+
+model Venue {
+  id               String         @id @default(cuid())
+  name             String
+  slug             String         @unique
+  type             String
+  address          String
+  city             String
+  area             String?
+  state            String
+  pincode          String
+  latitude         Float?
+  longitude        Float?
+  description      String?
+  images           String?
+  capacity         Int            @default(0)
+  totalStallSlots  Int            @default(0)
+  contactName      String?
+  contactPhone     String?
+  contactEmail     String?
+  isActive         Boolean        @default(true)
+  familyCount      Int            @default(0)
+  employeeCount    Int            @default(0)
+  bestCategories   String?
+  vendorRating     Float          @default(0)
+  eventFrequency   String?
+  parkingNotes     String?
+  powerSupply      String?
+  smartScore       Float          @default(0)
+  avgSpendPerVisit Float          @default(0)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  adminId          String
+  events                Event[]
+  parkingSlots          ParkingSlot[]
+  setupKits             SetupKit[]
+  admin                 User                 @relation(fields: [adminId], references: [id])
+  amenities             VenueAmenity[]
+  vendorSubscriptions   VendorSubscription[]
+  demandVotes           DemandVote[]
+}
+
+model VenueAmenity {
+  id          String  @id @default(cuid())
+  venueId     String
+  name        String
+  description String?
+  isAvailable Boolean @default(true)
+  charges     Float   @default(0)
+  venue       Venue   @relation(fields: [venueId], references: [id], onDelete: Cascade)
+}
+
+model ParkingSlot {
+  id          String  @id @default(cuid())
+  venueId     String
+  slotNumber  String
+  type        String
+  isAvailable Boolean @default(true)
+  charges     Float   @default(0)
+  venue       Venue   @relation(fields: [venueId], references: [id], onDelete: Cascade)
+}
+
+model Event {
+  id                 String    @id @default(cuid())
+  title              String
+  slug               String    @unique
+  description        String?
+  shortDescription   String?
+  categoryId         String
+  venueId            String
+  organizerId        String
+  startDate          DateTime
+  endDate            DateTime
+  startTime          String
+  endTime            String
+  eventType          String
+  status             String    @default("DRAFT")
+  bannerImage        String?
+  images             String?
+  maxStalls          Int       @default(0)
+  bookedStalls       Int       @default(0)
+  basePrice          Float     @default(0)
+  currency           String    @default("INR")
+  bookingDeadline    DateTime?
+  cancellationPolicy String?
+  parkingInfo        String?
+  lastEventInfo      String?
+  terms              String?
+  stallCategories    String?
+  isFeatured         Boolean   @default(false)
+  viewCount          Int       @default(0)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  shareToken         String?   @unique
+  upiId              String?
+  bookings           Booking[]
+  organizer          User             @relation(fields: [organizerId], references: [id])
+  venue              Venue            @relation(fields: [venueId], references: [id])
+  category           Category         @relation(fields: [categoryId], references: [id])
+  reviews            Review[]
+  stalls             Stall[]
+  visitorCheckIns    VisitorCheckIn[]
+  waitlistEntries    WaitlistEntry[]
+  teamMembers        EventTeamMember[]
+  sponsors           EventSponsor[]
+}
+
+model Stall {
+  id            String   @id @default(cuid())
+  eventId       String
+  stallNumber   String
+  name          String?
+  type          String
+  size          String
+  price         Float
+  positionX     Float    @default(0)
+  positionY     Float    @default(0)
+  width         Float    @default(1)
+  height        Float    @default(1)
+  stallCategory String?
+  status        String   @default("AVAILABLE")
+  amenities     String?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  booking       Booking?
+  event         Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+model Booking {
+  id             String         @id @default(cuid())
+  bookingNumber  String         @unique
+  eventId        String
+  stallId        String         @unique
+  vendorId       String
+  stallCategory  String?
+  status         String         @default("PENDING")
+  amount         Float
+  tax            Float          @default(0)
+  amenityCharges Float          @default(0)
+  totalAmount    Float
+  paymentId      String?
+  paymentOrderId String?
+  paymentStatus  String         @default("PENDING")
+  paymentMode    String         @default("UPFRONT")
+  paidAt         DateTime?
+  notes          String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  setupKitId     String?
+  vendor          User             @relation(fields: [vendorId], references: [id])
+  stall           Stall            @relation(fields: [stallId], references: [id])
+  event           Event            @relation(fields: [eventId], references: [id])
+  gatePass        GatePass?
+  salesLogs       SalesLog[]
+  transfer        StallTransfer?   @relation("TransferBooking")
+  utilityBillings UtilityBilling[]
+  bnplAgreement   BNPLAgreement?
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  eventId    String
+  authorId   String
+  targetId   String
+  rating     Int
+  title      String?
+  comment    String?
+  reviewType String   @default("EVENT_REVIEW")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  target     User     @relation("ReviewTarget", fields: [targetId], references: [id])
+  author     User     @relation("ReviewAuthor", fields: [authorId], references: [id])
+  event      Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  senderId   String
+  receiverId String
+  subject    String?
+  content    String
+  isRead     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  receiver   User     @relation("MessageReceiver", fields: [receiverId], references: [id])
+  sender     User     @relation("MessageSender", fields: [senderId], references: [id])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  title     String
+  message   String
+  link      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VendorDocument {
+  id             String        @id @default(cuid())
+  vendorId       String
+  type           String
+  documentNumber String
+  fileUrl        String?
+  expiresAt      DateTime?
+  isVerified     Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  vendor         VendorProfile @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+}
+
+model GatePass {
+  id            String   @id @default(cuid())
+  bookingId     String   @unique
+  vendorName    String
+  businessName  String
+  eventTitle    String
+  venueName     String
+  stallNumber   String
+  vehicleNumber String?
+  vehicleType   String?
+  qrCode        String   @unique
+  validFrom     DateTime
+  validTo       DateTime
+  status        String   @default("ACTIVE")
+  createdAt     DateTime @default(now())
+  booking       Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+}
+
+model SalesLog {
+  id        String   @id @default(cuid())
+  bookingId String
+  date      DateTime
+  amount    Float
+  notes     String?
+  createdAt DateTime @default(now())
+  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+}
+
+model StallTransfer {
+  id           String   @id @default(cuid())
+  bookingId    String   @unique
+  fromVendorId String
+  toVendorId   String?
+  price        Float
+  reason       String?
+  status       String   @default("LISTED")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  booking      Booking  @relation("TransferBooking", fields: [bookingId], references: [id])
+}
+
+model SetupKit {
+  id          String  @id @default(cuid())
+  venueId     String
+  name        String
+  description String?
+  items       String
+  price       Float
+  isActive    Boolean @default(true)
+  venue       Venue   @relation(fields: [venueId], references: [id], onDelete: Cascade)
+}
+
+model GovernmentScheme {
+  id             String  @id @default(cuid())
+  name           String
+  description    String
+  eligibility    String
+  benefits       String
+  applicationUrl String?
+  category       String
+  isActive       Boolean @default(true)
+}
+
+model StallShareRequest {
+  id              String   @id @default(cuid())
+  vendorId        String
+  eventId         String
+  stallId         String?
+  message         String?
+  category        String?
+  budget          Float?
+  status          String   @default("OPEN")
+  partnerVendorId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ── Feature 2: Stall QR POS ──────────────────────────────────────────────────
+model StallMenuItem {
+  id          String       @id @default(cuid())
+  vendorId    String
+  name        String
+  description String?
+  price       Float
+  category    String?
+  image       String?
+  isAvailable Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  vendor      User         @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  orders      StallOrder[]
+}
+
+model StallOrder {
+  id         String        @id @default(cuid())
+  menuItemId String
+  eventId    String
+  stallId    String?
+  quantity   Int           @default(1)
+  amount     Float
+  upiRef     String?
+  status     String        @default("PENDING")
+  createdAt  DateTime      @default(now())
+  menuItem   StallMenuItem @relation(fields: [menuItemId], references: [id])
+}
+
+// ── Feature 8: Recurring Event Subscription ──────────────────────────────────
+model VendorSubscription {
+  id        String   @id @default(cuid())
+  vendorId  String
+  venueId   String?
+  tag       String?
+  createdAt DateTime @default(now())
+  vendor    User     @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  venue     Venue?   @relation(fields: [venueId], references: [id])
+
+  @@unique([vendorId, venueId])
+}
+
+// ── Feature 6: Event Template / Clone ────────────────────────────────────────
+model EventTemplate {
+  id           String   @id @default(cuid())
+  managerId    String
+  name         String
+  templateData String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  manager      User     @relation(fields: [managerId], references: [id], onDelete: Cascade)
+}
+
+// ── Feature 10: Footfall QR ───────────────────────────────────────────────────
+model VisitorCheckIn {
+  id        String   @id @default(cuid())
+  eventId   String
+  name      String?
+  phone     String?
+  checkedAt DateTime @default(now())
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+// ── Feature 5: Notification Preferences ──────────────────────────────────────
+model NotificationPreference {
+  id          String  @id @default(cuid())
+  userId      String  @unique
+  inApp       Boolean @default(true)
+  email       Boolean @default(true)
+  whatsapp    Boolean @default(false)
+  whatsappNo  String?
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ── Feature 12: Inventory Planner ────────────────────────────────────────────
+model InventoryItem {
+  id          String   @id @default(cuid())
+  vendorId    String
+  name        String
+  unit        String   @default("units")
+  costPrice   Float    @default(0)
+  sellPrice   Float    @default(0)
+  defaultQty  Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  vendor      User     @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+}
+
+// ── Feature 14: Waitlist ──────────────────────────────────────────────────────
+model WaitlistEntry {
+  id        String   @id @default(cuid())
+  eventId   String
+  vendorId  String
+  category  String?
+  notified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  vendor    User     @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, vendorId])
+}
+
+// ── Feature 19: Multi-Organizer Team ─────────────────────────────────────────
+model EventTeamMember {
+  id        String   @id @default(cuid())
+  eventId   String
+  userId    String
+  role      String   @default("VIEWER")
+  createdAt DateTime @default(now())
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+}
+
+// ── Feature 24: Utility Billing ───────────────────────────────────────────────
+model UtilityBilling {
+  id        String   @id @default(cuid())
+  bookingId String
+  type      String
+  units     Float    @default(0)
+  rate      Float    @default(0)
+  amount    Float
+  notes     String?
+  createdAt DateTime @default(now())
+  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+}
+
+// ── Feature 31: BNPL ─────────────────────────────────────────────────────────
+model BNPLAgreement {
+  id          String    @id @default(cuid())
+  bookingId   String    @unique
+  vendorId    String
+  amount      Float
+  dueDate     DateTime
+  status      String    @default("PENDING")
+  settledAt   DateTime?
+  createdAt   DateTime  @default(now())
+  booking     Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  vendor      User      @relation(fields: [vendorId], references: [id])
+}
+
+// ── Feature 32: WhatsApp Bot ──────────────────────────────────────────────────
+model WhatsAppSession {
+  id        String   @id @default(cuid())
+  phone     String   @unique
+  step      String   @default("IDLE")
+  data      String   @default("{}")
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+}
+
+// ── Feature 33: Resident Demand Portal ───────────────────────────────────────
+model DemandVote {
+  id            String   @id @default(cuid())
+  venueId       String
+  residentName  String?
+  residentEmail String?
+  residentPhone String?
+  category      String
+  subcategory   String?
+  createdAt     DateTime @default(now())
+  venue         Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+}
+
+// ── Feature 25: Sponsor Management ───────────────────────────────────────────
+model EventSponsor {
+  id            String   @id @default(cuid())
+  eventId       String
+  name          String
+  logoUrl       String?
+  websiteUrl    String?
+  tier          String   @default("BRONZE")
+  amount        Float    @default(0)
+  visibility    String?
+  paymentStatus String   @default("PENDING")
+  createdAt     DateTime @default(now())
+  event         Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
